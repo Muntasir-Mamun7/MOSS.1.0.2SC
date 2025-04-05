@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectrum Auction Platform</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #1cc88a;
+            --danger-color: #e74a3b;
+            --warning-color: #f6c23e;
+            --info-color: #36b9cc;
+            --light-bg: #f8f9fc;
+            --card-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--light-bg);
+            color: #5a5c69;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 0.35rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.25rem;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #4e73df;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .header {
+            background-color: white;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+        }
+        
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .navbar {
+            background-color: white;
+            box-shadow: var(--card-shadow);
+            padding: 0.75rem 1rem;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .hoverable:hover {
+            transform: translateY(-2px);
+            transition: transform 0.3s ease;
+        }
+
+        .bg-gradient-primary {
+            background: linear-gradient(90deg, var(--primary-color) 0%, #224abe 100%);
+            color: white;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-broadcast-tower me-2"></i>
+                Spectrum Auction
+            </a>
+            <div class="d-flex">
+                <div class="me-3">
+                    <span id="networkBadge" class="badge bg-secondary">Network: Unknown</span>
+                </div>
+                <div>
+                    <span id="accountStatus" class="badge bg-secondary">Not Connected</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Connection Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Wallet Connection</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p id="connectionStatus">Please connect your wallet to participate in the spectrum auction.</p>
+                        <button id="connectWallet" class="btn btn-primary">
+                            <i class="fas fa-wallet me-2"></i>Connect MetaMask
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="accountDetails" class="d-none">
+                            <h6>Account Information:</h6>
+                            <p id="accountAddress">Address: -</p>
+                            <p id="accountBalance">Balance: -</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registration Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Registration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="registrationStatus"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-center">
+                            <button id="registerAsSeller" class="btn btn-success me-3">
+                                <i class="fas fa-broadcast-tower me-2"></i>Register as Seller
+                            </button>
+                            <button id="registerAsBuyer" class="btn btn-info">
+                                <i class="fas fa-shopping-cart me-2"></i>Register as Buyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="adminPanel" class="card mb-4 d-none">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Admin Controls</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-center">
+                    <button id="matchAuctions" class="btn btn-warning me-3">
+                        <i class="fas fa-handshake me-2"></i>Match Auctions
+                    </button>
+                    <button id="terminateAuction" class="btn btn-danger">
+                        <i class="fas fa-stop-circle me-2"></i>Terminate Auction
+                    </button>
+                </div>
+                <div id="adminMessage" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Seller Dashboard -->
+        <div id="sellerDashboard" class="card mb-4 d-none">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Seller Dashboard</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="sellerTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="create-offer-tab" data-bs-toggle="tab" data-bs-target="#create-offer" type="button" role="tab" aria-controls="create-offer" aria-selected="true">Create Offer</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="my-offers-tab" data-bs-toggle="tab" data-bs-target="#my-offers" type="button" role="tab" aria-controls="my-offers" aria-selected="false">My Offers</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="rate-buyers-tab" data-bs-toggle="tab" data-bs-target="#rate-buyers" type="button" role="tab" aria-controls="rate-buyers" aria-selected="false">Rate Buyers</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="sellerTabContent">
+                    <!-- Create Offer Tab -->
+                    <div class="tab-pane fade show active" id="create-offer" role="tabpanel" aria-labelledby="create-offer-tab">
+                        <div class="row">
+                            <div class="col-md-8 mx-auto">
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <form id="offerForm">
+                                            <div class="mb-3">
+                                                <label for="availableSpectrum" class="form-label">Available Spectrum (MHz)</label>
+                                                <input type="number" class="form-control" id="availableSpectrum" min="1" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="unitPrice" class="form-label">Unit Price (wei per MHz)</label>
+                                                <input type="number" class="form-control" id="unitPrice" min="1" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="costCoefficient" class="form-label">Cost Coefficient</label>
+                                                <input type="number" class="form-control" id="costCoefficient" min="1" required>
+                                                <div class="form-text">Cost coefficient affects optimal price in the Stackelberg model</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-primary">Create Offer</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- My Offers Tab -->
+                    <div class="tab-pane fade" id="my-offers" role="tabpanel" aria-labelledby="my-offers-tab">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Spectrum (MHz)</th>
+                                        <th>Unit Price</th>
+                                        <th>Cost Coefficient</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myOffersList">
+                                    <!-- Seller's offers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Rate Buyers Tab -->
+                    <div class="tab-pane fade" id="rate-buyers" role="tabpanel" aria-labelledby="rate-buyers-tab">
+                        <div class="row">
+                            <div class="col-md-8 mx-auto">
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="buyerAddressToRate" class="form-label">Buyer Address</label>
+                                            <input type="text" class="form-control" id="buyerAddressToRate" placeholder="0x...">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="sellerRating" class="form-label">Rating (0-100)</label>
+                                            <input type="range" class="form-range" id="sellerRating" min="0" max="100" value="50">
+                                            <div class="text-center" id="sellerRatingValue">50</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <button id="submitSellerRating" class="btn btn-primary">Submit Rating</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buyer Dashboard -->
+        <div id="buyerDashboard" class="card mb-4 d-none">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Buyer Dashboard</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="buyerTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="submit-bid-tab" data-bs-toggle="tab" data-bs-target="#submit-bid" type="button" role="tab" aria-controls="submit-bid" aria-selected="true">Submit Bid</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="my-bids-tab" data-bs-toggle="tab" data-bs-target="#my-bids" type="button" role="tab" aria-controls="my-bids" aria-selected="false">My Bids</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="rate-sellers-tab" data-bs-toggle="tab" data-bs-target="#rate-sellers" type="button" role="tab" aria-controls="rate-sellers" aria-selected="false">Rate Sellers</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="buyerTabContent">
+                    <!-- Submit Bid Tab -->
+                    <div class="tab-pane fade show active" id="submit-bid" role="tabpanel" aria-labelledby="submit-bid-tab">
+                        <div class="row">
+                            <div class="col-md-8 mx-auto">
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <form id="bidForm">
+                                            <div class="mb-3">
+                                                <label for="demand" class="form-label">Demand (MHz)</label>
+                                                <input type="number" class="form-control" id="demand" min="1" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="capacity" class="form-label">Capacity Parameter</label>
+                                                <input type="number" class="form-control" id="capacity" min="1" required>
+                                                <div class="form-text">Affects valuation in the Stackelberg model</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="urgency" class="form-label">Urgency (0-100000)</label>
+                                                <input type="range" class="form-range" id="urgency" min="0" max="100000" value="50000">
+                                                <div class="text-center" id="urgencyValue">50000</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="valuationCoefficient" class="form-label">Valuation Coefficient</label>
+                                                <input type="number" class="form-control" id="valuationCoefficient" min="1" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bidAmount" class="form-label">Bid Amount (wei)</label>
+                                                <input type="number" class="form-control" id="bidAmount" min="1" required>
+                                            </div>
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-primary">Submit Bid</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- My Bids Tab -->
+                    <div class="tab-pane fade" id="my-bids" role="tabpanel" aria-labelledby="my-bids-tab">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Demand (MHz)</th>
+                                        <th>Capacity</th>
+                                        <th>Urgency</th>
+                                        <th>Bid Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myBidsList">
+                                    <!-- Buyer's bids will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Rate Sellers Tab -->
+                    <div class="tab-pane fade" id="rate-sellers" role="tabpanel" aria-labelledby="rate-sellers-tab">
+                        <div class="row">
+                            <div class="col-md-8 mx-auto">
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="sellerAddressToRate" class="form-label">Seller Address</label>
+                                            <input type="text" class="form-control" id="sellerAddressToRate" placeholder="0x...">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="buyerRating" class="form-label">Rating (0-100)</label>
+                                            <input type="range" class="form-range" id="buyerRating" min="0" max="100" value="50">
+                                            <div class="text-center" id="buyerRatingValue">50</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <button id="submitBuyerRating" class="btn btn-primary">Submit Rating</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Overview -->
+        <div class="card mb-4">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Market Overview</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="marketTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="offers-tab" data-bs-toggle="tab" data-bs-target="#offers" type="button" role="tab" aria-controls="offers" aria-selected="true">Available Offers</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab" aria-controls="transactions" aria-selected="false">Transactions</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="verify-tab" data-bs-toggle="tab" data-bs-target="#verify" type="button" role="tab" aria-controls="verify" aria-selected="false">Verify Transaction</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="marketTabContent">
+                    <!-- Available Offers Tab -->
+                    <div class="tab-pane fade show active" id="offers" role="tabpanel" aria-labelledby="offers-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Seller</th>
+                                        <th>Spectrum (MHz)</th>
+                                        <th>Unit Price</th>
+                                        <th>Cost Coefficient</th>
+                                        <th>Reputation</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="offersList">
+                                    <!-- Offers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button id="refreshOffers" class="btn btn-outline-primary">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh Offers
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Transactions Tab -->
+                    <div class="tab-pane fade" id="transactions" role="tabpanel" aria-labelledby="transactions-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Seller</th>
+                                        <th>Buyer</th>
+                                        <th>Spectrum (MHz)</th>
+                                        <th>Price Paid</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionsList">
+                                    <!-- Transactions will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button id="refreshTransactions" class="btn btn-outline-primary">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh Transactions
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Verify Transaction Tab -->
+                    <div class="tab-pane fade" id="verify" role="tabpanel" aria-labelledby="verify-tab">
+                        <div class="row">
+                            <div class="col-md-8 mx-auto">
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="transactionIndex" class="form-label">Transaction Index</label>
+                                            <input type="number" class="form-control" id="transactionIndex" min="0">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="transactionKey" class="form-label">Transaction Key (Hash)</label>
+                                            <input type="text" class="form-control" id="transactionKey" placeholder="0x...">
+                                        </div>
+                                        <div class="text-center">
+                                            <button id="verifyTransaction" class="btn btn-primary">Verify Transaction</button>
+                                        </div>
+                                        <div id="verificationResult" class="mt-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div class="card mb-4">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="m-0 text-white">Status Messages</h5>
+            </div>
+            <div class="card-body">
+                <div id="statusMessages" class="alert alert-info">
+                    Welcome to the Spectrum Auction Platform. Connect your wallet to get started.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white text-center p-4 mt-5">
+        <div class="container">
+            <p class="mb-0">© 2025 Spectrum Auction Platform. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <script>
+        // ============================================================
+        // Contract Configuration
+        // ============================================================
+        const contractAddress = "0xC84697C84b5A5d496e0e5AC69b819dFc9Db29895"; 
+        const contractABI = [
+            
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "auctionEnd",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "totalRemainingSpectrum",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "AuctionTerminated",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "address",
+                        "name": "seller",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "address",
+                        "name": "buyer",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "allocatedSpectrum",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "pricePaid",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "bytes32",
+                        "name": "txKey",
+                        "type": "bytes32"
+                    }
+                ],
+                "name": "AuctionMatched",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "buyer",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "demand",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "capacity",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "urgency",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "bidAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "valuationCoefficient",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "BidSubmitted",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "seller",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "availableSpectrum",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "unitPrice",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "costCoefficient",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "OfferCreated",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "operator",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "enum SpectrumAuction.OperatorType",
+                        "name": "opType",
+                        "type": "uint8"
+                    }
+                ],
+                "name": "OperatorRegistered",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "operator",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newReputation",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "ReputationUpdated",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "operator",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newSatisfaction",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "SatisfactionUpdated",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "INIT_REPUTATION",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "INIT_SATISFACTION",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "PRECISION",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "admin",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "auctionEnd",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "auctionEnded",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "auctionStart",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "bids",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "buyer",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "demand",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "capacity",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "urgency",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "bidAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "valuationCoefficient",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "active",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "buyerList",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_seller",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_rating",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "buyerRateSeller",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_availableSpectrum",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_unitPrice",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_costCoefficient",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "listOffer",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "matchAuctions",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "offers",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "seller",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "availableSpectrum",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "unitPrice",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "costCoefficient",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "active",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "name": "operators",
+                "outputs": [
+                    {
+                        "internalType": "address payable",
+                        "name": "operatorAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "enum SpectrumAuction.OperatorType",
+                        "name": "opType",
+                        "type": "uint8"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "reputation",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "satisfaction",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "registered",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "registerBuyer",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "registerSeller",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_buyer",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_rating",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "sellerRateBuyer",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "sellerList",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_demand",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_capacity",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_urgency",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_valuationCoefficient",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "submitBid",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "terminateAuction",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "transactions",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "seller",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "buyer",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "allocatedSpectrum",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "pricePaid",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "txKey",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "verified",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_txIndex",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "_txKey",
+                        "type": "bytes32"
+                    }
+                ],
+                "name": "verifyTransaction",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "stateMutability": "payable",
+                "type": "receive"
+            }
+        ];
+
+        // ============================================================
+        // Global Variables
+        // ============================================================
+        let web3;
+        let spectrumAuction;
+        let userAccount;
+        let isAdmin = false;
+        let userType = null; // 0 for seller, 1 for buyer
+        let isRegistered = false;
+        let networkId;
+
+        // ============================================================
+        // Web3 Initialization
+        // ============================================================
+        async function initializeWeb3() {
+            if (window.ethereum) {
+                try {
+                    // Modern dapp browsers
+                    web3 = new Web3(window.ethereum);
+                    console.log("Web3 initialized with ethereum provider");
+                    
+                    // Check if we already have access
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_accounts' 
+                    });
+                    
+                    if (accounts && accounts.length > 0) {
+                        console.log("Already connected to account:", accounts[0]);
+                        await connectAccount(accounts);
+                    }
+                    
+                    // Add event listeners for account changes
+                    window.ethereum.on('accountsChanged', handleAccountsChanged);
+                    window.ethereum.on('chainChanged', () => window.location.reload());
+                    
+                    return web3;
+                } catch (error) {
+                    console.error("Error initializing Web3:", error);
+                    updateStatus("Error initializing Web3: " + error.message, "danger");
+                    throw error;
+                }
+            } else {
+                updateStatus("Please install MetaMask to use this DApp", "danger");
+                throw new Error("No Ethereum provider found");
+            }
+        }
+
+        // Initialize contract
+        async function initializeContract() {
+            try {
+                if (!web3) {
+                    console.error("Web3 not initialized yet");
+                    throw new Error("Web3 not initialized");
+                }
+                
+                if (!contractAddress || contractAddress === "0xYOUR_DEPLOYED_CONTRACT_ADDRESS") {
+                    updateStatus("ERROR: Contract address not configured. Please set your contract address in the code.", "danger");
+                    throw new Error("Contract address not set");
+                }
+                
+                spectrumAuction = new web3.eth.Contract(contractABI, contractAddress);
+                console.log("Contract initialized at address:", contractAddress);
+                return spectrumAuction;
+            } catch (error) {
+                console.error("Error initializing contract:", error);
+                updateStatus("Error initializing contract: " + error.message, "danger");
+                throw error;
+            }
+        }
+
+        // ============================================================
+        // Account Management
+        // ============================================================
+        async function connectWallet() {
+            try {
+                if (!window.ethereum) {
+                    throw new Error("MetaMask not installed");
+                }
+                
+                // Request account access
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                await connectAccount(accounts);
+                
+            } catch (error) {
+                console.error("Error connecting wallet:", error);
+                let errorMsg = error.message;
+                
+                if (error.code === 4001) {
+                    errorMsg = "Connection request rejected. Please try again and approve the connection request.";
+                } else if (error.code === -32002) {
+                    errorMsg = "MetaMask connection window is already open. Please complete the connection.";
+                }
+                
+                updateStatus("Error connecting wallet: " + errorMsg, "danger");
+            }
+        }
+
+        // Handle account connection after permission is granted
+        async function connectAccount(accounts) {
+            if (!accounts || accounts.length === 0) {
+                throw new Error("No accounts found or access denied");
+            }
+            
+            userAccount = accounts[0];
+            console.log("Connected account:", userAccount);
+            
+            // Update UI
+            $("#accountStatus").removeClass("bg-secondary").addClass("bg-success").text("Connected");
+            $("#connectionStatus").html(`<div class="alert alert-success">Wallet connected successfully!</div>`);
+            $("#accountAddress").text(`Address: ${shortenAddress(userAccount)}`);
+            $("#accountDetails").removeClass("d-none");
+            
+            // Get account balance
+            const balance = await web3.eth.getBalance(userAccount);
+            const ethBalance = web3.utils.fromWei(balance, 'ether');
+            $("#accountBalance").text(`Balance: ${parseFloat(ethBalance).toFixed(4)} ETH`);
+            
+            // Check network
+            await checkNetwork();
+            
+            // Initialize contract after wallet is connected
+            await initializeContract();
+            
+            // Check if user is admin
+            try {
+                const adminAddress = await spectrumAuction.methods.admin().call();
+                isAdmin = (userAccount.toLowerCase() === adminAddress.toLowerCase());
+                console.log("Admin check:", isAdmin ? "User is admin" : "User is not admin");
+                
+                if (isAdmin) {
+                    $("#adminPanel").removeClass("d-none");
+                }
+            } catch (error) {
+                console.error("Error checking admin status:", error);
+            }
+            
+            // Check if user is registered
+            await checkRegistrationStatus();
+            
+            // Load data
+            await loadAllMarketData();
+            
+            updateStatus("Wallet connected successfully! Address: " + shortenAddress(userAccount), "success");
+        }
+
+        // Handle account changes
+        function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                resetAccountUI();
+                updateStatus("Disconnected from MetaMask. Please reconnect.", "warning");
+            } else if (accounts[0] !== userAccount) {
+                userAccount = accounts[0];
+                updateAccountUI();
+                checkRegistrationStatus();
+                loadAllMarketData();
+                updateStatus("Account changed to " + shortenAddress(userAccount), "info");
+            }
+        }
+
+        // Reset UI when disconnected
+        function resetAccountUI() {
+            userAccount = null;
+            isRegistered = false;
+            isAdmin = false;
+            
+            $("#accountStatus").removeClass("bg-success").addClass("bg-secondary").text("Not Connected");
+            $("#connectionStatus").html(`<div class="alert alert-warning">Wallet disconnected. Please connect to continue.</div>`);
+            $("#accountDetails").addClass("d-none");
+            $("#sellerDashboard").addClass("d-none");
+            $("#buyerDashboard").addClass("d-none");
+            $("#adminPanel").addClass("d-none");
+            
+            $("#registrationStatus").html('<div class="alert alert-warning">Not registered</div>');
+            $("#registerAsSeller").prop("disabled", false);
+            $("#registerAsBuyer").prop("disabled", false);
+        }
+
+        // Update UI when account changes
+        function updateAccountUI() {
+            $("#accountAddress").text(`Address: ${shortenAddress(userAccount)}`);
+            
+            // Get and display new balance
+            web3.eth.getBalance(userAccount).then(balance => {
+                const ethBalance = web3.utils.fromWei(balance, 'ether');
+                $("#accountBalance").text(`Balance: ${parseFloat(ethBalance).toFixed(4)} ETH`);
+            });
+        }
+
+        // Check network
+        async function checkNetwork() {
+            try {
+                networkId = await web3.eth.net.getId();
+                const networkName = getNetworkName(networkId);
+                $("#networkBadge").removeClass("bg-secondary").addClass("bg-primary")
+                    .text(`Network: ${networkName}`);
+                console.log("Connected to network:", networkName, "(" + networkId + ")");
+                return networkId;
+            } catch (error) {
+                console.error("Error checking network:", error);
+                throw error;
+            }
+        }
+
+        // Get network name from ID
+        function getNetworkName(id) {
+            const networks = {
+                1: "Ethereum Mainnet",
+                3: "Ropsten Testnet",
+                4: "Rinkeby Testnet",
+                5: "Goerli Testnet",
+                42: "Kovan Testnet",
+                56: "Binance Smart Chain",
+                97: "BSC Testnet",
+                137: "Polygon",
+                80001: "Mumbai Testnet",
+                31337: "Hardhat Local",
+                1337: "Ganache Local"
+            };
+            return networks[id] || `Unknown (${id})`;
+        }
+
+        // ============================================================
+        // Registration Functions
+        // ============================================================
+        async function checkRegistrationStatus() {
+            try {
+                const operator = await spectrumAuction.methods.operators(userAccount).call();
+                isRegistered = operator.registered;
+                
+                console.log("Registration status:", isRegistered ? "Registered" : "Not registered");
+                
+                if (isRegistered) {
+                    userType = parseInt(operator.opType);
+                    
+                    $("#registrationStatus").html(`
+                        <div class="alert alert-success">
+                            <strong>Registered as ${userType === 0 ? 'Seller' : 'Buyer'}</strong><br>
+                            <div class="mt-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Reputation:</span>
+                                    <span>${operator.reputation}/100</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-info" role="progressbar" style="width: ${operator.reputation}%" 
+                                         aria-valuenow="${operator.reputation}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Satisfaction:</span>
+                                    <span>${operator.satisfaction}/100</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: ${operator.satisfaction}%" 
+                                         aria-valuenow="${operator.satisfaction}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    
+                    $("#registerAsSeller").prop("disabled", true);
+                    $("#registerAsBuyer").prop("disabled", true);
+                    
+                    if (userType === 0) { // Seller
+                        $("#sellerDashboard").removeClass("d-none");
+                        $("#buyerDashboard").addClass("d-none");
+                    } else { // Buyer
+                        $("#buyerDashboard").removeClass("d-none");
+                        $("#sellerDashboard").addClass("d-none");
+                    }
+                } else {
+                    $("#registrationStatus").html('<div class="alert alert-warning">Not registered. Please register as a buyer or seller to participate.</div>');
+                    $("#registerAsSeller").prop("disabled", false);
+                    $("#registerAsBuyer").prop("disabled", false);
+                    $("#sellerDashboard").addClass("d-none");
+                    $("#buyerDashboard").addClass("d-none");
+                }
+            } catch (error) {
+                console.error("Error checking registration status:", error);
+                updateStatus("Error checking registration: " + error.message, "danger");
+            }
+        }
+
+        // Register as a seller
+        async function registerAsSeller() {
+            try {
+                updateStatus("Registering as seller...");
+                await spectrumAuction.methods.registerSeller().send({ from: userAccount });
+                updateStatus("Successfully registered as a seller!", "success");
+                await checkRegistrationStatus();
+            } catch (error) {
+                console.error("Error registering as seller:", error);
+                updateStatus("Error registering as seller: " + error.message, "danger");
+            }
+        }
+
+        // Register as a buyer
+        async function registerAsBuyer() {
+            try {
+                updateStatus("Registering as buyer...");
+                await spectrumAuction.methods.registerBuyer().send({ from: userAccount });
+                updateStatus("Successfully registered as a buyer!", "success");
+                await checkRegistrationStatus();
+            } catch (error) {
+                console.error("Error registering as buyer:", error);
+                updateStatus("Error registering as buyer: " + error.message, "danger");
+            }
+        }
+
+        // ============================================================
+        // Seller Functions
+        // ============================================================
+        async function createOffer(event) {
+            event.preventDefault();
+            
+            try {
+                const spectrum = $("#availableSpectrum").val();
+                const unitPrice = $("#unitPrice").val();
+                const costCoefficient = $("#costCoefficient").val();
+                
+                if (!spectrum || !unitPrice || !costCoefficient) {
+                    updateStatus("Please fill in all fields", "warning");
+                    return;
+                }
+                
+                updateStatus("Creating spectrum offer...");
+                await spectrumAuction.methods.listOffer(spectrum, unitPrice, costCoefficient)
+                    .send({ from: userAccount });
+                
+                updateStatus("Spectrum offer created successfully!", "success");
+                $("#offerForm").trigger("reset");
+                
+                // Refresh data
+                await loadOffers();
+                await loadMyOffers();
+            } catch (error) {
+                console.error("Error creating offer:", error);
+                updateStatus("Error creating offer: " + error.message, "danger");
+            }
+        }
+
+        async function rateBuyer() {
+            try {
+                const buyerAddress = $("#buyerAddressToRate").val();
+                const rating = $("#sellerRating").val();
+                
+                if (!web3.utils.isAddress(buyerAddress)) {
+                    updateStatus("Please enter a valid Ethereum address", "warning");
+                    return;
+                }
+                
+                updateStatus("Submitting rating...");
+                await spectrumAuction.methods.sellerRateBuyer(buyerAddress, rating)
+                    .send({ from: userAccount });
+                
+                updateStatus("Rating submitted successfully!", "success");
+                $("#buyerAddressToRate").val("");
+                $("#sellerRating").val(50);
+                $("#sellerRatingValue").text("50");
+            } catch (error) {
+                console.error("Error rating buyer:", error);
+                updateStatus("Error rating buyer: " + error.message, "danger");
+            }
+        }
+
+        async function loadMyOffers() {
+            if (!userAccount || userType !== 0) return; // Only for sellers
+            
+            try {
+                $("#myOffersList").empty();
+                
+                let i = 0;
+                let offerExists = true;
+                let offers = [];
+                
+                // Get all offers for the current seller
+                while (offerExists && i < 100) {
+                    try {
+                        const offer = await spectrumAuction.methods.offers(i).call();
+                        if (offer.seller.toLowerCase() === userAccount.toLowerCase()) {
+                            offers.push({ id: i, ...offer });
+                        }
+                        i++;
+                    } catch (e) {
+                        offerExists = false;
+                    }
+                }
+                
+                console.log(`Found ${offers.length} offers for current seller`);
+                
+                if (offers.length === 0) {
+                    $("#myOffersList").html('<tr><td colspan="5" class="text-center">No offers found</td></tr>');
+                } else {
+                    for (const offer of offers) {
+                        $("#myOffersList").append(`
+                            <tr>
+                                <td>${offer.id}</td>
+                                <td>${offer.availableSpectrum}</td>
+                                <td>${offer.unitPrice}</td>
+                                <td>${offer.costCoefficient}</td>
+                                <td>
+                                    <span class="badge ${offer.active ? 'bg-success' : 'bg-secondary'}">
+                                        ${offer.active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading seller offers:", error);
+                updateStatus("Error loading your offers: " + error.message, "danger");
+            }
+        }
+
+        // ============================================================
+        // Buyer Functions
+        // ============================================================
+        async function submitBid(event) {
+            event.preventDefault();
+            
+            try {
+                const demand = $("#demand").val();
+                const capacity = $("#capacity").val();
+                const urgency = $("#urgency").val();
+                const valuationCoefficient = $("#valuationCoefficient").val();
+                const bidAmount = $("#bidAmount").val();
+                
+                if (!demand || !capacity || !valuationCoefficient || !bidAmount) {
+                    updateStatus("Please fill in all fields", "warning");
+                    return;
+                }
+                
+                updateStatus("Submitting bid...");
+                await spectrumAuction.methods.submitBid(demand, capacity, urgency, valuationCoefficient)
+                    .send({ 
+                        from: userAccount, 
+                        value: bidAmount 
+                    });
+                
+                updateStatus("Bid submitted successfully!", "success");
+                $("#bidForm").trigger("reset");
+                $("#urgencyValue").text("50000");
+                
+                // Refresh data
+                await loadMyBids();
+            } catch (error) {
+                console.error("Error submitting bid:", error);
+                updateStatus("Error submitting bid: " + error.message, "danger");
+            }
+        }
+
+        async function rateSeller() {
+            try {
+                const sellerAddress = $("#sellerAddressToRate").val();
+                const rating = $("#buyerRating").val();
+                
+                if (!web3.utils.isAddress(sellerAddress)) {
+                    updateStatus("Please enter a valid Ethereum address", "warning");
+                    return;
+                }
+                
+                updateStatus("Submitting rating...");
+                await spectrumAuction.methods.buyerRateSeller(sellerAddress, rating)
+                    .send({ from: userAccount });
+                
+                updateStatus("Rating submitted successfully!", "success");
+                $("#sellerAddressToRate").val("");
+                $("#buyerRating").val(50);
+                $("#buyerRatingValue").text("50");
+            } catch (error) {
+                console.error("Error rating seller:", error);
+                updateStatus("Error rating seller: " + error.message, "danger");
+            }
+        }
+
+        async function loadMyBids() {
+            if (!userAccount || userType !== 1) return; // Only for buyers
+            
+            try {
+                $("#myBidsList").empty();
+                
+                let i = 0;
+                let bidExists = true;
+                let bids = [];
+                
+                // Get all bids for the current buyer
+                while (bidExists && i < 100) {
+                    try {
+                        const bid = await spectrumAuction.methods.bids(i).call();
+                        if (bid.buyer.toLowerCase() === userAccount.toLowerCase()) {
+                            bids.push({ id: i, ...bid });
+                        }
+                        i++;
+                    } catch (e) {
+                        bidExists = false;
+                    }
+                }
+                
+                console.log(`Found ${bids.length} bids for current buyer`);
+                
+                if (bids.length === 0) {
+                    $("#myBidsList").html('<tr><td colspan="6" class="text-center">No bids found</td></tr>');
+                } else {
+                    for (const bid of bids) {
+                        $("#myBidsList").append(`
+                            <tr>
+                                <td>${bid.id}</td>
+                                <td>${bid.demand}</td>
+                                <td>${bid.capacity}</td>
+                                <td>${bid.urgency}</td>
+                                <td>${bid.bidAmount}</td>
+                                <td>
+                                    <span class="badge ${bid.active ? 'bg-success' : 'bg-secondary'}">
+                                        ${bid.active ? 'Active' : 'Matched'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading buyer bids:", error);
+                updateStatus("Error loading your bids: " + error.message, "danger");
+            }
+        }
+
+        // ============================================================
+        // Market Functions
+        // ============================================================
+        async function loadAllMarketData() {
+            try {
+                await Promise.all([
+                    loadOffers(),
+                    loadTransactions(),
+                    userType === 0 ? loadMyOffers() : null,
+                    userType === 1 ? loadMyBids() : null
+                ]);
+                console.log("All market data loaded successfully");
+            } catch (error) {
+                console.error("Error loading market data:", error);
+            }
+        }
+
+        async function loadOffers() {
+            try {
+                $("#offersList").empty();
+                
+                let i = 0;
+                let offerExists = true;
+                let offers = [];
+                
+                // Get all active offers
+                while (offerExists && i < 100) {
+                    try {
+                        const offer = await spectrumAuction.methods.offers(i).call();
+                        // Check if this is a real offer (with non-zero addresses)
+                        if (offer.seller !== '0x0000000000000000000000000000000000000000') {
+                            offers.push({ id: i, ...offer });
+                        }
+                        i++;
+                    } catch (e) {
+                        offerExists = false;
+                    }
+                }
+                
+                console.log(`Found ${offers.length} total offers`);
+                
+                if (offers.length === 0) {
+                    $("#offersList").html('<tr><td colspan="6" class="text-center">No offers available</td></tr>');
+                } else {
+                    // Filter to show only active offers
+                    const activeOffers = offers.filter(offer => offer.active);
+                    
+                    if (activeOffers.length === 0) {
+                        $("#offersList").html('<tr><td colspan="6" class="text-center">No active offers available</td></tr>');
+                        return;
+                    }
+                    
+                    for (const offer of activeOffers) {
+                        try {
+                            const operator = await spectrumAuction.methods.operators(offer.seller).call();
+                            
+                            $("#offersList").append(`
+                                <tr class="hoverable">
+                                    <td>${offer.id}</td>
+                                    <td>${shortenAddress(offer.seller)}</td>
+                                    <td>${offer.availableSpectrum} MHz</td>
+                                    <td>${offer.unitPrice} wei</td>
+                                    <td>${offer.costCoefficient}</td>
+                                    <td>
+                                        <div class="text-center">
+                                            <span class="badge bg-${getReputationColor(operator.reputation)}">${operator.reputation}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `);
+                        } catch (error) {
+                            console.error(`Error loading operator for offer ${offer.id}:`, error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading offers:", error);
+                updateStatus("Error loading offers: " + error.message, "danger");
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                $("#transactionsList").empty();
+                
+                let i = 0;
+                let txExists = true;
+                let transactions = [];
+                
+                // Get all transactions
+                while (txExists && i < 100) {
+                    try {
+                        const tx = await spectrumAuction.methods.transactions(i).call();
+                        // Check if this is a real transaction (with non-zero addresses)
+                        if (tx.seller !== '0x0000000000000000000000000000000000000000' && 
+                            tx.buyer !== '0x0000000000000000000000000000000000000000') {
+                            transactions.push({ id: i, ...tx });
+                        }
+                        i++;
+                    } catch (e) {
+                        txExists = false;
+                    }
+                }
+                
+                console.log(`Found ${transactions.length} transactions`);
+                
+                if (transactions.length === 0) {
+                    $("#transactionsList").html('<tr><td colspan="6" class="text-center">No transactions found</td></tr>');
+                } else {
+                    for (const tx of transactions) {
+                        $("#transactionsList").append(`
+                            <tr class="hoverable">
+                                <td>${tx.id}</td>
+                                <td>${shortenAddress(tx.seller)}</td>
+                                <td>${shortenAddress(tx.buyer)}</td>
+                                <td>${tx.allocatedSpectrum} MHz</td>
+                                <td>${tx.pricePaid} wei</td>
+                                <td>
+                                    <span class="badge ${tx.verified ? 'bg-success' : 'bg-warning'}">
+                                        ${tx.verified ? 'Verified' : 'Pending Verification'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading transactions:", error);
+                updateStatus("Error loading transactions: " + error.message, "danger");
+            }
+        }
+
+        // Verify a transaction
+        async function verifyTransaction() {
+            try {
+                const txIndex = $("#transactionIndex").val();
+                const txKey = $("#transactionKey").val();
+                
+                if (!txIndex) {
+                    updateStatus("Please enter a transaction index", "warning");
+                    return;
+                }
+                
+                if (!txKey) {
+                    updateStatus("Please enter a transaction key", "warning");
+                    return;
+                }
+                
+                const result = await spectrumAuction.methods.verifyTransaction(txIndex, txKey).call();
+                
+                if (result) {
+                    $("#verificationResult").html(`
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i> Transaction #${txIndex} verified successfully!
+                        </div>
+                    `);
+                } else {
+                    $("#verificationResult").html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-times-circle me-2"></i> Transaction #${txIndex} verification failed!
+                        </div>
+                    `);
+                }
+            } catch (error) {
+                console.error("Error verifying transaction:", error);
+                $("#verificationResult").html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i> Error: ${error.message}
+                    </div>
+                `);
+            }
+        }
+
+        // ============================================================
+        // Admin Functions
+        // ============================================================
+        async function matchAuctions() {
+            try {
+                if (!isAdmin) {
+                    updateStatus("Only admin can match auctions", "warning");
+                    return;
+                }
+                
+                $("#adminMessage").html('<div class="alert alert-info">Matching auctions in progress...</div>');
+                updateStatus("Matching auctions. Please confirm in MetaMask...", "info");
+                
+                await spectrumAuction.methods.matchAuctions().send({ from: userAccount });
+                
+                $("#adminMessage").html('<div class="alert alert-success">Auctions matched successfully!</div>');
+                updateStatus("Auctions matched successfully!", "success");
+                
+                // Refresh all data
+                await loadAllMarketData();
+            } catch (error) {
+                console.error("Error matching auctions:", error);
+                $("#adminMessage").html(`<div class="alert alert-danger">Error: ${error.message}</div>`);
+                updateStatus("Error matching auctions: " + error.message, "danger");
+            }
+        }
+
+        async function terminateAuction() {
+            try {
+                if (!isAdmin) {
+                    updateStatus("Only admin can terminate the auction", "warning");
+                    return;
+                }
+                
+                if (confirm("Are you sure you want to terminate the auction? This action cannot be undone.")) {
+                    $("#adminMessage").html('<div class="alert alert-info">Terminating auction in progress...</div>');
+                    updateStatus("Terminating auction. Please confirm in MetaMask...", "info");
+                    
+                    await spectrumAuction.methods.terminateAuction().send({ from: userAccount });
+                    
+                    $("#adminMessage").html('<div class="alert alert-success">Auction terminated successfully!</div>');
+                    updateStatus("Auction terminated successfully! The auction is now closed.", "success");
+                    
+                    // Refresh all data
+                    await loadAllMarketData();
+                }
+            } catch (error) {
+                console.error("Error terminating auction:", error);
+                $("#adminMessage").html(`<div class="alert alert-danger">Error: ${error.message}</div>`);
+                updateStatus("Error terminating auction: " + error.message, "danger");
+            }
+        }
+
+        // ============================================================
+        // Utility Functions
+        // ============================================================
+        function shortenAddress(address) {
+            return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        }
+
+        function getReputationColor(reputation) {
+            if (reputation >= 80) return 'success';
+            if (reputation >= 60) return 'info';
+            if (reputation >= 40) return 'warning';
+            return 'danger';
+        }
+
+        function updateStatus(message, type = "info") {
+            $("#statusMessages").removeClass().addClass(`alert alert-${type}`).html(message);
+            
+            // Scroll to status message if it's a warning or error
+            if (type === 'danger' || type === 'warning') {
+                $('html, body').animate({
+                    scrollTop: $("#statusMessages").offset().top
+                }, 500);
+            }
+        }
+
+        // ============================================================
+        // Event Listeners
+        // ============================================================
+        $(document).ready(function() {
+            // Initialize
+            initializeWeb3()
+                .catch(error => console.error("Error in initialization:", error));
+            
+            // Connect wallet
+            $("#connectWallet").click(connectWallet);
+            
+            // Registration
+            $("#registerAsSeller").click(registerAsSeller);
+            $("#registerAsBuyer").click(registerAsBuyer);
+            
+            // Seller functions
+            $("#offerForm").submit(createOffer);
+            $("#submitSellerRating").click(rateBuyer);
+            
+            // Buyer functions
+            $("#bidForm").submit(submitBid);
+            $("#submitBuyerRating").click(rateSeller);
+            
+            // Market functions
+            $("#verifyTransaction").click(verifyTransaction);
+            $("#refreshOffers").click(loadOffers);
+            $("#refreshTransactions").click(loadTransactions);
+            
+            // Admin functions
+            $("#matchAuctions").click(matchAuctions);
+            $("#terminateAuction").click(terminateAuction);
+            
+            // Show slider values
+            $("#sellerRating").on("input", function() {
+                $("#sellerRatingValue").text($(this).val());
+            });
+            
+            $("#buyerRating").on("input", function() {
+                $("#buyerRatingValue").text($(this).val());
+            });
+            
+            $("#urgency").on("input", function() {
+                $("#urgencyValue").text($(this).val());
+            });
+        });
+
+        // Event listeners for MetaMask
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', handleAccountsChanged);
+            window.ethereum.on('chainChanged', () => {
+                console.log("Network changed, reloading page");
+                window.location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
