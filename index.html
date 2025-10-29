@@ -131,6 +131,14 @@
             font-weight: bold;
             margin-left: 10px;
         }
+        .multi-admin-notice {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            color: #155724;
+        }
     </style>
 </head>
 <body>
@@ -155,7 +163,7 @@
         <h3>⚠️ Contract Configuration Issue</h3>
         <p><strong>The contract address is not deployed on the current network.</strong></p>
         <p>Current Network: <span id="current-network">Unknown</span></p>
-        <p>Contract Address: <span id="contract-address-display">0x14Af547c63819Ec4dc49971320A483e33a5cF6cB</span></p>
+        <p>Contract Address: <span id="contract-address-display">0x2D13e1Ddf86217beE712d46c98A7CdF1912A3B10</span></p>
         <p><strong>Please:</strong></p>
         <ol>
             <li>Deploy your contract to the Sepolia testnet (Network ID: 11155111)</li>
@@ -169,7 +177,13 @@
             <h2>Auction Information</h2>
             <div>
                 <p><strong>Seller:</strong> <span id="seller-address">Loading...</span></p>
-                <p><strong>Admin:</strong> <span id="admin-address">Loading...</span><span id="admin-badge" class="admin-badge hidden">YOU ARE ADMIN</span></p>
+                <p><strong>Contract Admin:</strong> <span id="admin-address">Loading...</span></p>
+                <p id="multi-admin-list" class="multi-admin-notice hidden">
+                    <strong>🔐 Authorized Admins:</strong><br>
+                    • 0x6185...8D1D<br>
+                    • 0x6130...AF55
+                </p>
+                <p id="your-admin-status" class="hidden"><span id="admin-badge" class="admin-badge">YOU ARE ADMIN</span></p>
                 <p><strong>Initial Bandwidth:</strong> <span id="seller-bandwidth">Loading...</span></p>
                 <p><strong>Remaining Bandwidth:</strong> <span id="remaining-bandwidth">Loading...</span></p>
                 <p><strong>Auction Status:</strong> <span id="auction-status">Loading...</span></p>
@@ -235,9 +249,14 @@
     </div>
 
     <div class="card" id="admin-panel">
-        <h2>🔐 Admin Panel</h2>
+        <h2>🔐 Admin Control Panel</h2>
         <p style="color: #28a745; font-weight: bold;">✅ You have admin privileges</p>
-        <button id="end-auction" class="danger">End Auction</button>
+        <p style="font-size: 14px; color: #666;">As an authorized admin, you can:</p>
+        <ul style="font-size: 14px; color: #666;">
+            <li>End the current auction</li>
+            <li>Reset the auction to start fresh</li>
+        </ul>
+        <button id="end-auction" class="danger">🛑 End Auction</button>
         <button id="reset-auction" class="secondary">🔄 Reset Auction</button>
         <div id="admin-status"></div>
     </div>
@@ -246,12 +265,12 @@
     <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
     <script>
         // ⚠️ IMPORTANT: Update this address with your deployed contract address
-        const contractAddress = "0x14Af547c63819Ec4dc49971320A483e33a5cF6cB";
+        const contractAddress = "0x2D13e1Ddf86217beE712d46c98A7CdF1912A3B10";
         
-        // 🔐 AUTHORIZED ADMIN ADDRESSES (case-insensitive)
+        // 🔐 AUTHORIZED ADMIN ADDRESSES (Both have full admin control)
         const AUTHORIZED_ADMINS = [
-            "0x613051d0F7f7D0760f34a5aB815b8BFE159cAF55",
-            "0x6185a8fc6d973f54c5aDe7f7Be0D03B55a5C8D1D"
+            "0x6185a8fc6d973f54c5aDe7f7Be0D03B55a5C8D1D", // Admin 1
+            "0x613051d0F7f7D0760f34a5aB815b8BFE159cAF55"  // Admin 2
         ];
         
         const contractABI = [
@@ -1185,15 +1204,17 @@
         let hasPaidAlready = false;
         let contractExists = false;
 
-        // Check if address is authorized admin
+        // Check if address is authorized admin (case-insensitive)
         function isAuthorizedAdmin(address) {
-            return AUTHORIZED_ADMINS.some(admin => admin.toLowerCase() === address.toLowerCase());
+            const normalizedAddress = address.toLowerCase();
+            return AUTHORIZED_ADMINS.some(admin => admin.toLowerCase() === normalizedAddress);
         }
 
         // Initialize the app
         async function init() {
             try {
                 console.log('🚀 Initializing DApp...');
+                console.log('🔐 Authorized Admins:', AUTHORIZED_ADMINS);
                 
                 // Check if MetaMask is installed
                 if (typeof window.ethereum !== 'undefined') {
@@ -1206,8 +1227,13 @@
                         console.log(`✅ Connected to account: ${currentAccount}`);
                         
                         // Check if user is authorized admin
-                        if (isAuthorizedAdmin(currentAccount)) {
-                            console.log('🔐 ADMIN ACCESS GRANTED');
+                        const userIsAdmin = isAuthorizedAdmin(currentAccount);
+                        console.log(`🔐 Admin check for ${currentAccount}: ${userIsAdmin}`);
+                        
+                        if (userIsAdmin) {
+                            console.log('✅✅✅ ADMIN ACCESS GRANTED ✅✅✅');
+                            // Show admin list
+                            document.getElementById('multi-admin-list').classList.remove('hidden');
                         }
                         
                         // Setup Web3
@@ -1230,8 +1256,11 @@
                             document.getElementById('current-network').textContent = `${networkType} (ID: ${networkId})`;
                             document.getElementById('contract-address-display').textContent = contractAddress;
                             
-                            document.getElementById('connection-status').innerHTML = 
-                                `⚠️ Connected to ${shortenAddress(currentAccount)}, but contract not found on this network`;
+                            let statusMsg = `⚠️ Connected to ${shortenAddress(currentAccount)}, but contract not found on this network`;
+                            if (userIsAdmin) {
+                                statusMsg += ' 🔐 (Admin)';
+                            }
+                            document.getElementById('connection-status').innerHTML = statusMsg;
                             document.getElementById('connection-status').className = 'status warning';
                             
                             // Set all fields to show error state
@@ -1248,23 +1277,34 @@
                         
                         // Update connection status
                         let statusMessage = `✅ Connected: ${shortenAddress(currentAccount)} on ${networkType} (${networkId})`;
-                        if (isAuthorizedAdmin(currentAccount)) {
-                            statusMessage += ' 🔐';
+                        if (userIsAdmin) {
+                            statusMessage += ' 🔐 ADMIN';
                         }
                         document.getElementById('connection-status').innerHTML = statusMessage;
                         document.getElementById('connection-status').className = 'status success';
                         
                         // Setup MetaMask listeners
                         window.ethereum.on('accountsChanged', function (accounts) {
+                            console.log('🔄 Account changed');
                             currentAccount = accounts[0];
-                            console.log(`🔄 Account changed to: ${currentAccount}`);
+                            console.log(`New account: ${currentAccount}`);
                             
-                            if (isAuthorizedAdmin(currentAccount)) {
-                                console.log('🔐 ADMIN ACCESS GRANTED');
+                            const newUserIsAdmin = isAuthorizedAdmin(currentAccount);
+                            console.log(`🔐 New admin check: ${newUserIsAdmin}`);
+                            
+                            if (newUserIsAdmin) {
+                                console.log('✅ NEW ACCOUNT IS ADMIN');
+                                document.getElementById('multi-admin-list').classList.remove('hidden');
+                            } else {
+                                document.getElementById('multi-admin-list').classList.add('hidden');
                             }
                             
-                            document.getElementById('connection-status').innerHTML = 
-                                `✅ Connected: ${shortenAddress(currentAccount)}`;
+                            let statusMsg = `✅ Connected: ${shortenAddress(currentAccount)}`;
+                            if (newUserIsAdmin) {
+                                statusMsg += ' 🔐 ADMIN';
+                            }
+                            document.getElementById('connection-status').innerHTML = statusMsg;
+                            
                             setTimeout(() => loadData(), 500);
                         });
 
@@ -1440,27 +1480,30 @@
             }
         }
 
-        // Check if current user is admin (includes authorized admins)
+        // Check if current user is admin
         async function checkUserRole() {
             try {
                 const contractAdmin = await contract.methods.admin().call();
                 
-                // Check if user is either contract admin OR in authorized admin list
-                isAdmin = (contractAdmin.toLowerCase() === currentAccount.toLowerCase()) ||
-                          isAuthorizedAdmin(currentAccount);
+                // ✅ IMPORTANT: Check if current account is in authorized admin list
+                isAdmin = isAuthorizedAdmin(currentAccount);
                 
-                console.log(`🔐 Admin status: ${isAdmin ? 'YES' : 'NO'}`);
+                console.log(`🔐 Contract Admin: ${contractAdmin}`);
+                console.log(`🔐 Current Account: ${currentAccount}`);
+                console.log(`🔐 Is Authorized Admin: ${isAdmin}`);
                 
-                // Show/hide admin panel
+                // Show/hide admin panel based on authorization
                 const adminPanel = document.getElementById('admin-panel');
                 adminPanel.style.display = isAdmin ? 'block' : 'none';
                 
-                // Show admin badge if user is admin
-                const adminBadge = document.getElementById('admin-badge');
+                // Show/hide admin badge
+                const adminStatus = document.getElementById('your-admin-status');
                 if (isAdmin) {
-                    adminBadge.classList.remove('hidden');
+                    adminStatus.classList.remove('hidden');
+                    console.log('✅✅✅ ADMIN PANEL VISIBLE ✅✅✅');
                 } else {
-                    adminBadge.classList.add('hidden');
+                    adminStatus.classList.add('hidden');
+                    console.log('❌ Not an admin - panel hidden');
                 }
                 
             } catch (error) {
@@ -1635,12 +1678,15 @@
         // End auction (admin only)
         async function endAuction() {
             try {
+                console.log(`🔐 End Auction - isAdmin: ${isAdmin}`);
+                
                 if (!isAdmin) {
-                    showStatus('admin-status', "❌ Admin access required", 'error');
+                    showStatus('admin-status', "❌ You don't have admin privileges", 'error');
+                    alert("Access Denied: You must be an authorized admin to end the auction.");
                     return;
                 }
                 
-                if (!confirm("Are you sure you want to end the auction?")) {
+                if (!confirm("⚠️ Are you sure you want to END the auction?\n\nThis action cannot be undone and will stop all bidding.")) {
                     return;
                 }
                 
@@ -1653,7 +1699,7 @@
                 });
                 
                 console.log(`✅ TX: ${tx.transactionHash}`);
-                showStatus('admin-status', "Auction ended!", 'success');
+                showStatus('admin-status', "✅ Auction ended successfully!", 'success');
                 
                 setTimeout(() => loadData(), 1000);
                 
@@ -1666,12 +1712,15 @@
         // Reset auction (admin only)
         async function resetAuction() {
             try {
+                console.log(`🔐 Reset Auction - isAdmin: ${isAdmin}`);
+                
                 if (!isAdmin) {
-                    showStatus('admin-status', "❌ Admin access required", 'error');
+                    showStatus('admin-status', "❌ You don't have admin privileges", 'error');
+                    alert("Access Denied: You must be an authorized admin to reset the auction.");
                     return;
                 }
                 
-                if (!confirm("Are you sure you want to reset the auction?")) {
+                if (!confirm("⚠️ Are you sure you want to RESET the auction?\n\nThis will:\n• Clear all buyer data\n• Reset all auction parameters\n• Start fresh\n\nContinue?")) {
                     return;
                 }
                 
@@ -1684,7 +1733,7 @@
                 });
                 
                 console.log(`✅ TX: ${tx.transactionHash}`);
-                showStatus('admin-status', "🎉 Auction reset successfully!", 'success');
+                showStatus('admin-status', "🎉 Auction reset successfully! You can now register new buyers.", 'success');
                 
                 setTimeout(() => loadData(), 1000);
                 
