@@ -1,3 +1,6 @@
+<!DOCTYPE html>I'll provide you with the complete modified frontend code that includes the reset functionality. Here's the updated HTML file:
+
+````html name=index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,6 +96,24 @@
             font-weight: 800;
             font-size: 1.25rem;
         }
+
+        .btn-reset {
+            background-color: #858796;
+            border-color: #858796;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background-color: #6e707e;
+            border-color: #6e707e;
+            color: white;
+        }
+
+        .auction-status-badge {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -104,6 +125,9 @@
                 Spectrum Auction
             </a>
             <div class="d-flex">
+                <div class="me-3">
+                    <span id="auctionStatusBadge" class="badge bg-success auction-status-badge">Auction: Active</span>
+                </div>
                 <div class="me-3">
                     <span id="networkBadge" class="badge bg-secondary">Network: Unknown</span>
                 </div>
@@ -181,12 +205,15 @@
                 <h5 class="m-0 text-white">Admin Controls</h5>
             </div>
             <div class="card-body">
-                <div class="d-flex justify-content-center">
-                    <button id="matchAuctions" class="btn btn-warning me-3">
+                <div class="d-flex justify-content-center flex-wrap gap-2">
+                    <button id="matchAuctions" class="btn btn-warning">
                         <i class="fas fa-handshake me-2"></i>Match Auctions
                     </button>
                     <button id="terminateAuction" class="btn btn-danger">
                         <i class="fas fa-stop-circle me-2"></i>Terminate Auction
+                    </button>
+                    <button id="resetAuction" class="btn btn-reset d-none">
+                        <i class="fas fa-redo me-2"></i>Reset Auction
                     </button>
                 </div>
                 <div id="adminMessage" class="mt-3"></div>
@@ -520,32 +547,12 @@
         // ============================================================
         // Contract Configuration
         // ============================================================
-        const contractAddress = "0x245BCC8D4b2204349C4CcA4b0667dC6250e565E1"; 
+        const contractAddress = "0x5f260bdE28d1ECB707A05C4B3bF92470D57B1C5A"; 
         const contractABI = [
-            
             {
                 "inputs": [],
                 "stateMutability": "nonpayable",
                 "type": "constructor"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {
-                        "indexed": false,
-                        "internalType": "uint256",
-                        "name": "auctionEnd",
-                        "type": "uint256"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "uint256",
-                        "name": "totalRemainingSpectrum",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "AuctionTerminated",
-                "type": "event"
             },
             {
                 "anonymous": false,
@@ -582,6 +589,44 @@
                     }
                 ],
                 "name": "AuctionMatched",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "newAuctionStart",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "address",
+                        "name": "resetBy",
+                        "type": "address"
+                    }
+                ],
+                "name": "AuctionReset",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "auctionEnd",
+                        "type": "uint256"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "totalRemainingSpectrum",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "AuctionTerminated",
                 "type": "event"
             },
             {
@@ -1015,6 +1060,13 @@
                 "type": "function"
             },
             {
+                "inputs": [],
+                "name": "resetAuction",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
                 "inputs": [
                     {
                         "internalType": "address",
@@ -1170,6 +1222,7 @@
         let userType = null; // 0 for seller, 1 for buyer
         let isRegistered = false;
         let networkId;
+        let auctionEndedStatus = false;
 
         // ============================================================
         // Web3 Initialization
@@ -1286,6 +1339,9 @@
             // Initialize contract after wallet is connected
             await initializeContract();
             
+            // Check auction status
+            await checkAuctionStatus();
+            
             // Check if user is admin
             try {
                 const adminAddress = await spectrumAuction.methods.admin().call();
@@ -1294,6 +1350,7 @@
                 
                 if (isAdmin) {
                     $("#adminPanel").removeClass("d-none");
+                    updateResetButtonVisibility();
                 }
             } catch (error) {
                 console.error("Error checking admin status:", error);
@@ -1316,6 +1373,7 @@
             } else if (accounts[0] !== userAccount) {
                 userAccount = accounts[0];
                 updateAccountUI();
+                checkAuctionStatus();
                 checkRegistrationStatus();
                 loadAllMarketData();
                 updateStatus("Account changed to " + shortenAddress(userAccount), "info");
@@ -1327,6 +1385,7 @@
             userAccount = null;
             isRegistered = false;
             isAdmin = false;
+            auctionEndedStatus = false;
             
             $("#accountStatus").removeClass("bg-success").addClass("bg-secondary").text("Not Connected");
             $("#connectionStatus").html(`<div class="alert alert-warning">Wallet disconnected. Please connect to continue.</div>`);
@@ -1334,6 +1393,7 @@
             $("#sellerDashboard").addClass("d-none");
             $("#buyerDashboard").addClass("d-none");
             $("#adminPanel").addClass("d-none");
+            $("#auctionStatusBadge").removeClass("bg-danger").addClass("bg-success").text("Auction: Active");
             
             $("#registrationStatus").html('<div class="alert alert-warning">Not registered</div>');
             $("#registerAsSeller").prop("disabled", false);
@@ -1382,6 +1442,49 @@
                 1337: "Ganache Local"
             };
             return networks[id] || `Unknown (${id})`;
+        }
+
+        // ============================================================
+        // Auction Status Management
+        // ============================================================
+        async function checkAuctionStatus() {
+            try {
+                auctionEndedStatus = await spectrumAuction.methods.auctionEnded().call();
+                console.log("Auction ended status:", auctionEndedStatus);
+                
+                if (auctionEndedStatus) {
+                    $("#auctionStatusBadge").removeClass("bg-success").addClass("bg-danger").text("Auction: Ended");
+                    
+                    // Disable forms for sellers and buyers
+                    $("#offerForm :input").prop("disabled", true);
+                    $("#bidForm :input").prop("disabled", true);
+                    $("#submitSellerRating").prop("disabled", true);
+                    $("#submitBuyerRating").prop("disabled", true);
+                    
+                    updateStatus("⚠️ The auction has ended. No new offers or bids can be placed.", "warning");
+                } else {
+                    $("#auctionStatusBadge").removeClass("bg-danger").addClass("bg-success").text("Auction: Active");
+                    
+                    // Enable forms for sellers and buyers
+                    $("#offerForm :input").prop("disabled", false);
+                    $("#bidForm :input").prop("disabled", false);
+                    $("#submitSellerRating").prop("disabled", false);
+                    $("#submitBuyerRating").prop("disabled", false);
+                }
+                
+                updateResetButtonVisibility();
+                
+            } catch (error) {
+                console.error("Error checking auction status:", error);
+            }
+        }
+
+        function updateResetButtonVisibility() {
+            if (isAdmin && auctionEndedStatus) {
+                $("#resetAuction").removeClass("d-none");
+            } else {
+                $("#resetAuction").addClass("d-none");
+            }
         }
 
         // ============================================================
@@ -1469,12 +1572,16 @@
                 updateStatus("Error registering as buyer: " + error.message, "danger");
             }
         }
-
         // ============================================================
         // Seller Functions
         // ============================================================
         async function createOffer(event) {
             event.preventDefault();
+            
+            if (auctionEndedStatus) {
+                updateStatus("Cannot create offer: Auction has ended", "danger");
+                return;
+            }
             
             try {
                 const spectrum = $("#availableSpectrum").val();
@@ -1503,6 +1610,11 @@
         }
 
         async function rateBuyer() {
+            if (auctionEndedStatus) {
+                updateStatus("Cannot rate: Auction has ended", "danger");
+                return;
+            }
+            
             try {
                 const buyerAddress = $("#buyerAddressToRate").val();
                 const rating = $("#sellerRating").val();
@@ -1582,6 +1694,11 @@
         async function submitBid(event) {
             event.preventDefault();
             
+            if (auctionEndedStatus) {
+                updateStatus("Cannot submit bid: Auction has ended", "danger");
+                return;
+            }
+            
             try {
                 const demand = $("#demand").val();
                 const capacity = $("#capacity").val();
@@ -1614,6 +1731,11 @@
         }
 
         async function rateSeller() {
+            if (auctionEndedStatus) {
+                updateStatus("Cannot rate: Auction has ended", "danger");
+                return;
+            }
+            
             try {
                 const sellerAddress = $("#sellerAddressToRate").val();
                 const rating = $("#buyerRating").val();
@@ -1826,7 +1948,7 @@
                 const txIndex = $("#transactionIndex").val();
                 const txKey = $("#transactionKey").val();
                 
-                if (!txIndex) {
+                if (!txIndex && txIndex !== 0) {
                     updateStatus("Please enter a transaction index", "warning");
                     return;
                 }
@@ -1871,6 +1993,11 @@
                     return;
                 }
                 
+                if (auctionEndedStatus) {
+                    updateStatus("Cannot match auctions: Auction has ended", "danger");
+                    return;
+                }
+                
                 $("#adminMessage").html('<div class="alert alert-info">Matching auctions in progress...</div>');
                 updateStatus("Matching auctions. Please confirm in MetaMask...", "info");
                 
@@ -1895,14 +2022,22 @@
                     return;
                 }
                 
-                if (confirm("Are you sure you want to terminate the auction? This action cannot be undone.")) {
+                if (auctionEndedStatus) {
+                    updateStatus("Auction has already been terminated", "warning");
+                    return;
+                }
+                
+                if (confirm("Are you sure you want to terminate the auction? This action cannot be undone unless you reset.")) {
                     $("#adminMessage").html('<div class="alert alert-info">Terminating auction in progress...</div>');
                     updateStatus("Terminating auction. Please confirm in MetaMask...", "info");
                     
                     await spectrumAuction.methods.terminateAuction().send({ from: userAccount });
                     
-                    $("#adminMessage").html('<div class="alert alert-success">Auction terminated successfully!</div>');
+                    $("#adminMessage").html('<div class="alert alert-success">Auction terminated successfully! You can now reset for a new round.</div>');
                     updateStatus("Auction terminated successfully! The auction is now closed.", "success");
+                    
+                    // Update auction status
+                    await checkAuctionStatus();
                     
                     // Refresh all data
                     await loadAllMarketData();
@@ -1911,6 +2046,50 @@
                 console.error("Error terminating auction:", error);
                 $("#adminMessage").html(`<div class="alert alert-danger">Error: ${error.message}</div>`);
                 updateStatus("Error terminating auction: " + error.message, "danger");
+            }
+        }
+
+        async function resetAuction() {
+            try {
+                if (!isAdmin) {
+                    updateStatus("Only admin can reset the auction", "warning");
+                    return;
+                }
+                
+                if (!auctionEndedStatus) {
+                    updateStatus("Auction must be terminated before resetting", "warning");
+                    return;
+                }
+                
+                if (confirm("Are you sure you want to reset the auction? This will:\n\n• Refund all active bids to buyers\n• Clear all offers, bids, and transactions\n• Start a new auction round\n\nThis action cannot be undone!")) {
+                    $("#adminMessage").html('<div class="alert alert-info"><strong>Resetting auction...</strong><br>This may take a moment as all active bids are being refunded.</div>');
+                    updateStatus("Resetting auction. Please confirm in MetaMask and wait...", "info");
+                    
+                    // Call resetAuction with higher gas limit as it refunds bids
+                    await spectrumAuction.methods.resetAuction().send({ 
+                        from: userAccount,
+                        gas: 5000000 // Higher gas limit for refunds
+                    });
+                    
+                    $("#adminMessage").html('<div class="alert alert-success"><strong>Auction reset successfully!</strong><br>A new auction round has started. All participants can now create new offers and bids.</div>');
+                    updateStatus("✅ Auction reset successfully! New auction round has started.", "success");
+                    
+                    // Update auction status
+                    await checkAuctionStatus();
+                    
+                    // Refresh all data
+                    await loadAllMarketData();
+                    
+                    // Re-enable forms
+                    $("#offerForm :input").prop("disabled", false);
+                    $("#bidForm :input").prop("disabled", false);
+                    $("#submitSellerRating").prop("disabled", false);
+                    $("#submitBuyerRating").prop("disabled", false);
+                }
+            } catch (error) {
+                console.error("Error resetting auction:", error);
+                $("#adminMessage").html(`<div class="alert alert-danger"><strong>Reset Failed!</strong><br>${error.message}</div>`);
+                updateStatus("Error resetting auction: " + error.message, "danger");
             }
         }
 
@@ -1934,7 +2113,7 @@
             // Scroll to status message if it's a warning or error
             if (type === 'danger' || type === 'warning') {
                 $('html, body').animate({
-                    scrollTop: $("#statusMessages").offset().top
+                    scrollTop: $("#statusMessages").offset().top - 100
                 }, 500);
             }
         }
@@ -1970,6 +2149,7 @@
             // Admin functions
             $("#matchAuctions").click(matchAuctions);
             $("#terminateAuction").click(terminateAuction);
+            $("#resetAuction").click(resetAuction);
             
             // Show slider values
             $("#sellerRating").on("input", function() {
@@ -1996,3 +2176,4 @@
     </script>
 </body>
 </html>
+                
